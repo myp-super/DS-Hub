@@ -15,7 +15,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("DS Hub")]
 [assembly: AssemblyProduct("DS Hub")]
 [assembly: AssemblyDescription("DS Hub 快速启动器")]
-[assembly: AssemblyVersion("3.11.2.0")]
+[assembly: AssemblyVersion("3.11.3.0")]
 
 namespace DeepSeekHub
 {
@@ -1279,10 +1279,10 @@ namespace DeepSeekHub
             root.Controls.Add(collapseBtn);
 
             // top-right icon buttons must paint above the docked labels:
-            // re-adding at the end keeps them at the highest z-order
-            root.Controls.SetChildIndex(themeToggle, root.Controls.Count - 1);
-            root.Controls.SetChildIndex(pinToggle, root.Controls.Count - 1);
-            root.Controls.SetChildIndex(collapseBtn, root.Controls.Count - 1);
+            // index 0 is the TOP of the z-order here, so bring them to the front
+            themeToggle.BringToFront();
+            pinToggle.BringToFront();
+            collapseBtn.BringToFront();
 
             // QQ-style top-edge drawer
             drawer = new DrawerForm();

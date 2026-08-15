@@ -1,5 +1,5 @@
 #define MyAppName "DS Hub"
-#define MyAppVersion "3.11.2.0"
+#define MyAppVersion "3.11.3.0"
 #define MyAppExeName "DS Hub.exe"
 
 [Setup]
