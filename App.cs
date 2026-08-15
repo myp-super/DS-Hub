@@ -15,7 +15,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("DS Hub")]
 [assembly: AssemblyProduct("DS Hub")]
 [assembly: AssemblyDescription("DS Hub 快速启动器")]
-[assembly: AssemblyVersion("3.11.3.0")]
+[assembly: AssemblyVersion("3.11.4.0")]
 
 namespace DeepSeekHub
 {
@@ -1240,7 +1240,7 @@ namespace DeepSeekHub
             // right click picks follow-system / dark / light)
             themeToggle = new ThemeToggle();
             themeToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            themeToggle.Location = new Point(root.Width - Ui.S(32), Ui.S(20));
+            themeToggle.Location = new Point(root.Width - Ui.S(32), Ui.S(6));
             themeToggle.Size = new Size(Ui.S(22), Ui.S(22));
             themeToggle.Click += delegate { ToggleTheme(); };
 
@@ -1255,7 +1255,7 @@ namespace DeepSeekHub
             // pin (always-on-top) toggle in the top-right cluster
             pinToggle = new PinToggle();
             pinToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            pinToggle.Location = new Point(root.Width - Ui.S(58), Ui.S(20));
+            pinToggle.Location = new Point(root.Width - Ui.S(58), Ui.S(6));
             pinToggle.Size = new Size(Ui.S(22), Ui.S(22));
             pinToggle.Click += delegate
             {
@@ -1270,7 +1270,7 @@ namespace DeepSeekHub
             // collapse-to-drawer icon button (compact, right-aligned with fixed gaps)
             collapseBtn = new CollapseIcon();
             collapseBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            collapseBtn.Location = new Point(root.Width - Ui.S(84), Ui.S(20));
+            collapseBtn.Location = new Point(root.Width - Ui.S(84), Ui.S(6));
             collapseBtn.Size = new Size(Ui.S(22), Ui.S(22));
             collapseBtn.Click += delegate { ToggleDrawer(); };
             tips.SetToolTip(collapseBtn, "收起：收纳到桌面顶部抽屉（点击鲸鱼释放）");
