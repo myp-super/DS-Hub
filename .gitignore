@@ -1,0 +1,27 @@
+# user data
+ds-balance-token.txt
+ds-translate-history.json
+
+# logs & debug output
+*.log
+hub-preview*.png
+layout-dump.txt
+translate-test*.log
+onshown.log
+live-capture.png
+
+# build output
+release/
+install-test/
+*.user
+
+# binary & harness plugin (machine-specific)
+DS Hub.exe
+plugin/
+
+# harness browser profile — PRIVATE USER DATA, never publish
+dsh-browser-profile/
+DeepSeek Hub.exe.WebView2/
+
+# IDE
+.vs/
