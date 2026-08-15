@@ -15,7 +15,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("DS Hub")]
 [assembly: AssemblyProduct("DS Hub")]
 [assembly: AssemblyDescription("DS Hub 快速启动器")]
-[assembly: AssemblyVersion("3.11.0.0")]
+[assembly: AssemblyVersion("3.11.1.0")]
 
 namespace DeepSeekHub
 {
@@ -23,6 +23,7 @@ namespace DeepSeekHub
     {
         public static float Scale = 1f;
         public static int S(int v) { return (int)Math.Round(v * Scale); }
+        public static float SF(float v) { return v * Scale; }
 
         /// <summary>Per-user data folder (token, history, logs) — created on demand.</summary>
         public static string DataDir()
@@ -432,10 +433,10 @@ namespace DeepSeekHub
                 pen.StartCap = LineCap.Round;
                 pen.EndCap = LineCap.Round;
                 // top bar + up chevron: collapse into the top drawer
-                g.DrawLine(pen, 6.5F, 5F, 15.5F, 5F);
-                g.DrawLine(pen, 11F, 15.5F, 7F, 11.5F);
-                g.DrawLine(pen, 11F, 15.5F, 15F, 11.5F);
-                g.DrawLine(pen, 7F, 18.5F, 15F, 18.5F);
+                g.DrawLine(pen, Ui.SF(6.5F), Ui.SF(5F), Ui.SF(15.5F), Ui.SF(5F));
+                g.DrawLine(pen, Ui.SF(11F), Ui.SF(15.5F), Ui.SF(7F), Ui.SF(11.5F));
+                g.DrawLine(pen, Ui.SF(11F), Ui.SF(15.5F), Ui.SF(15F), Ui.SF(11.5F));
+                g.DrawLine(pen, Ui.SF(7F), Ui.SF(18.5F), Ui.SF(15F), Ui.SF(18.5F));
             }
         }
     }
@@ -479,9 +480,9 @@ namespace DeepSeekHub
             using (SolidBrush brush = new SolidBrush(c))
             {
                 // thumbtack: head, neck, base
-                g.FillEllipse(brush, 7.5F, 4F, 7F, 7F);
-                g.FillRectangle(brush, 10.3F, 9.5F, 1.4F, 4F);
-                g.FillEllipse(brush, 6.5F, 13F, 9F, 4F);
+                g.FillEllipse(brush, Ui.SF(7.5F), Ui.SF(4F), Ui.SF(7F), Ui.SF(7F));
+                g.FillRectangle(brush, Ui.SF(10.3F), Ui.SF(9.5F), Ui.SF(1.4F), Ui.SF(4F));
+                g.FillEllipse(brush, Ui.SF(6.5F), Ui.SF(13F), Ui.SF(9F), Ui.SF(4F));
             }
         }
     }
@@ -994,6 +995,7 @@ namespace DeepSeekHub
             timeStatus.Height = Ui.S(20);
             timeStatus.Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold);
             timeStatus.TextAlign = ContentAlignment.MiddleCenter;
+            timeStatus.BackColor = Color.Transparent;
 
             Label timeDetail = new Label();
             this.timeDetail = timeDetail;
@@ -1001,6 +1003,7 @@ namespace DeepSeekHub
             timeDetail.Height = Ui.S(16);
             timeDetail.Font = new Font("Microsoft YaHei UI", 8F);
             timeDetail.TextAlign = ContentAlignment.MiddleCenter;
+            timeDetail.BackColor = Color.Transparent;
 
             LogoBox logo = new LogoBox();
             this.logoBox = logo;
@@ -1214,7 +1217,7 @@ namespace DeepSeekHub
             // right click picks follow-system / dark / light)
             themeToggle = new ThemeToggle();
             themeToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            themeToggle.Location = new Point(root.Width - Ui.S(32), Ui.S(6));
+            themeToggle.Location = new Point(root.Width - Ui.S(32), Ui.S(20));
             themeToggle.Size = new Size(Ui.S(22), Ui.S(22));
             themeToggle.Click += delegate { ToggleTheme(); };
 
@@ -1229,7 +1232,7 @@ namespace DeepSeekHub
             // pin (always-on-top) toggle in the top-right cluster
             pinToggle = new PinToggle();
             pinToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            pinToggle.Location = new Point(root.Width - Ui.S(58), Ui.S(6));
+            pinToggle.Location = new Point(root.Width - Ui.S(58), Ui.S(20));
             pinToggle.Size = new Size(Ui.S(22), Ui.S(22));
             pinToggle.Click += delegate
             {
@@ -1244,12 +1247,19 @@ namespace DeepSeekHub
             // collapse-to-drawer icon button (compact, right-aligned with fixed gaps)
             collapseBtn = new CollapseIcon();
             collapseBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            collapseBtn.Location = new Point(root.Width - Ui.S(84), Ui.S(6));
+            collapseBtn.Location = new Point(root.Width - Ui.S(84), Ui.S(20));
             collapseBtn.Size = new Size(Ui.S(22), Ui.S(22));
             collapseBtn.Click += delegate { ToggleDrawer(); };
             tips.SetToolTip(collapseBtn, "收起：收纳到桌面顶部抽屉（点击鲸鱼释放）");
-            root.Controls.Add(collapseBtn);
             root.Controls.Add(themeToggle);
+            root.Controls.Add(pinToggle);
+            root.Controls.Add(collapseBtn);
+
+            // top-right icon buttons must paint above the docked labels:
+            // re-adding at the end keeps them at the highest z-order
+            root.Controls.SetChildIndex(themeToggle, root.Controls.Count - 1);
+            root.Controls.SetChildIndex(pinToggle, root.Controls.Count - 1);
+            root.Controls.SetChildIndex(collapseBtn, root.Controls.Count - 1);
 
             // QQ-style top-edge drawer
             drawer = new DrawerForm();
