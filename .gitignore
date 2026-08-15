@@ -9,6 +9,17 @@ layout-dump.txt
 translate-test*.log
 onshown.log
 live-capture.png
+live2.png
+live3.png
+live4.png
+live5.png
+live6.png
+live7.png
+screen.png
+browser-logo-test.ps1
+check-hub.ps1
+ds-logo-d.txt
+dsh-browser.pid
 
 # build output
 release/
