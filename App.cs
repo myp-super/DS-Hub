@@ -15,7 +15,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("DS Hub")]
 [assembly: AssemblyProduct("DS Hub")]
 [assembly: AssemblyDescription("DS Hub 快速启动器")]
-[assembly: AssemblyVersion("3.11.1.0")]
+[assembly: AssemblyVersion("3.11.2.0")]
 
 namespace DeepSeekHub
 {
@@ -24,6 +24,7 @@ namespace DeepSeekHub
         public static float Scale = 1f;
         public static int S(int v) { return (int)Math.Round(v * Scale); }
         public static float SF(float v) { return v * Scale; }
+        public static bool Dark = false;
 
         /// <summary>Per-user data folder (token, history, logs) — created on demand.</summary>
         public static string DataDir()
@@ -31,6 +32,25 @@ namespace DeepSeekHub
             string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DS Hub");
             try { Directory.CreateDirectory(dir); } catch { }
             return dir;
+        }
+
+        /// <summary>Rounded chip behind the top-right icon buttons so they stay visible.</summary>
+        public static void DrawChip(Graphics g, Control c)
+        {
+            Color chipBg = Ui.Dark ? Color.FromArgb(38, 42, 52) : Color.White;
+            Color chipBorder = Ui.Dark ? Color.FromArgb(62, 66, 76) : Color.FromArgb(222, 226, 235);
+            using (GraphicsPath cp = new GraphicsPath())
+            {
+                int d = Ui.S(12);
+                Rectangle cr = new Rectangle(Ui.S(2), Ui.S(2), c.Width - Ui.S(4), c.Height - Ui.S(4));
+                cp.AddArc(cr.X, cr.Y, d, d, 180, 90);
+                cp.AddArc(cr.Right - d, cr.Y, d, d, 270, 90);
+                cp.AddArc(cr.Right - d, cr.Bottom - d, d, d, 0, 90);
+                cp.AddArc(cr.X, cr.Bottom - d, d, d, 90, 90);
+                cp.CloseFigure();
+                using (SolidBrush b = new SolidBrush(chipBg)) g.FillPath(b, cp);
+                using (Pen p = new Pen(chipBorder)) g.DrawPath(p, cp);
+            }
         }
     }
 
@@ -232,19 +252,20 @@ namespace DeepSeekHub
             using (SolidBrush brush = new SolidBrush(icon))
             using (Pen pen = new Pen(icon, 1.4F))
             {
+                Ui.DrawChip(g, this);
                 if (DarkTheme)
                 {
                     // sun: click to switch to light
                     float cx = Width / 2F;
                     float cy = Height / 2F;
-                    g.FillEllipse(brush, cx - 4F, cy - 4F, 8F, 8F);
+                    g.FillEllipse(brush, cx - 6F, cy - 6F, 12F, 12F);
                     for (int i = 0; i < 8; i++)
                     {
                         double a = i * Math.PI / 4.0;
-                        float x1 = cx + (float)Math.Cos(a) * 6.5F;
-                        float y1 = cy + (float)Math.Sin(a) * 6.5F;
-                        float x2 = cx + (float)Math.Cos(a) * 9.2F;
-                        float y2 = cy + (float)Math.Sin(a) * 9.2F;
+                        float x1 = cx + (float)Math.Cos(a) * 10F;
+                        float y1 = cy + (float)Math.Sin(a) * 10F;
+                        float x2 = cx + (float)Math.Cos(a) * 13.5F;
+                        float y2 = cy + (float)Math.Sin(a) * 13.5F;
                         g.DrawLine(pen, x1, y1, x2, y2);
                     }
                 }
@@ -416,6 +437,7 @@ namespace DeepSeekHub
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
+            Ui.DrawChip(g, this);
             if (hover)
             {
                 using (GraphicsPath gp = new GraphicsPath())
@@ -465,6 +487,7 @@ namespace DeepSeekHub
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
+            Ui.DrawChip(g, this);
             if (hover)
             {
                 using (GraphicsPath gp = new GraphicsPath())
@@ -480,9 +503,9 @@ namespace DeepSeekHub
             using (SolidBrush brush = new SolidBrush(c))
             {
                 // thumbtack: head, neck, base
-                g.FillEllipse(brush, Ui.SF(7.5F), Ui.SF(4F), Ui.SF(7F), Ui.SF(7F));
-                g.FillRectangle(brush, Ui.SF(10.3F), Ui.SF(9.5F), Ui.SF(1.4F), Ui.SF(4F));
-                g.FillEllipse(brush, Ui.SF(6.5F), Ui.SF(13F), Ui.SF(9F), Ui.SF(4F));
+                g.FillEllipse(brush, Ui.SF(10.5F), Ui.SF(5.5F), Ui.SF(10F), Ui.SF(10F));
+                g.FillRectangle(brush, Ui.SF(14.8F), Ui.SF(14F), Ui.SF(1.8F), Ui.SF(5F));
+                g.FillEllipse(brush, Ui.SF(9F), Ui.SF(19F), Ui.SF(12F), Ui.SF(5F));
             }
         }
     }
@@ -1472,6 +1495,7 @@ namespace DeepSeekHub
         {
             if (root == null || btnChat == null || drawer == null || inputBox == null || bottomArea == null) return; // WM_CREATE may land mid-ctor
             currentDark = dark;
+            Ui.Dark = dark;
             Color bg = dark ? Color.FromArgb(24, 26, 32) : Color.White;
             BackColor = bg;
             root.BackColor = bg;
