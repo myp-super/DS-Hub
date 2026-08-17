@@ -15,7 +15,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("DS Hub")]
 [assembly: AssemblyProduct("DS Hub")]
 [assembly: AssemblyDescription("DS Hub 快速启动器")]
-[assembly: AssemblyVersion("3.11.4.0")]
+[assembly: AssemblyVersion("3.12.0.0")]
 
 namespace DeepSeekHub
 {
@@ -143,6 +143,15 @@ namespace DeepSeekHub
                 hoverColor = Color.FromArgb(96, 123, 255);
                 downColor = Color.FromArgb(60, 88, 214);
             }
+            Invalidate();
+        }
+
+        /// <summary>Orange "restart" palette.</summary>
+        public void SetRestartMode()
+        {
+            baseColor = Color.FromArgb(217, 119, 6);
+            hoverColor = Color.FromArgb(232, 140, 40);
+            downColor = Color.FromArgb(190, 100, 2);
             Invalidate();
         }
 
@@ -891,6 +900,7 @@ namespace DeepSeekHub
         private readonly LogoBox logoBox;
         private readonly RoundButton btnChat;
         private readonly RoundButton btnHarness;
+        private readonly RoundButton btnRestart;
         private readonly RoundButton btnPlatform;
         private readonly RoundButton btnStop;
         private readonly System.Windows.Forms.Timer poll;
@@ -945,12 +955,15 @@ namespace DeepSeekHub
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
         [DllImport("user32.dll")]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        [DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
         private const int WM_HOTKEY = 0x0312;
         private const int HOTKEY_ID = 0xDB01;
         private Panel root;
         private DateTime deadline;
         private bool polling;
         private bool stopping;
+        private bool restartAfterStop;
         private bool currentDark;
         private int themeMode; // 0 = follow system, 1 = force dark, 2 = force light
         private bool docked;
@@ -988,8 +1001,8 @@ namespace DeepSeekHub
             Text = "DS Hub";
             AutoScaleMode = AutoScaleMode.None;
             Font = new Font("Microsoft YaHei UI", 9F);
-            ClientSize = new Size(Ui.S(320), Ui.S(497));
-            MinimumSize = new Size(Ui.S(320), Ui.S(497));
+            ClientSize = new Size(Ui.S(320), Ui.S(538));
+            MinimumSize = new Size(Ui.S(320), Ui.S(538));
             FormBorderStyle = FormBorderStyle.Sizable;
             MaximizeBox = false;
             BackColor = Color.White;
@@ -1037,6 +1050,10 @@ namespace DeepSeekHub
             this.btnChat = btnChat;
             RoundButton btnHarness = MakeButton("启动 DeepSeek Harness");
             this.btnHarness = btnHarness;
+            RoundButton btnRestart = MakeButton("重启 DeepSeek Harness");
+            btnRestart.SetRestartMode();
+            btnRestart.Enabled = false;
+            this.btnRestart = btnRestart;
             RoundButton btnPlatform = MakeButton("DeepSeek Platform");
             this.btnPlatform = btnPlatform;
             RoundButton btnStop = MakeButton("关闭 DeepSeek Harness");
@@ -1224,6 +1241,8 @@ namespace DeepSeekHub
             root.Controls.Add(MakeSpacer());
             root.Controls.Add(btnPlatform);
             root.Controls.Add(MakeSpacer());
+            root.Controls.Add(btnRestart);
+            root.Controls.Add(MakeSpacer());
             root.Controls.Add(btnHarness);
             root.Controls.Add(MakeSpacer());
             root.Controls.Add(btnChat);
@@ -1234,7 +1253,9 @@ namespace DeepSeekHub
             btnChat.Click += delegate { OpenUrl("https://chat.deepseek.com"); };
             btnPlatform.Click += delegate { OpenUrl("https://platform.deepseek.com"); };
             btnHarness.Click += delegate { OpenOrStartHarness(); };
+            btnRestart.Click += delegate { RestartHarness(); };
             btnStop.Click += delegate { StopHarness(); };
+            tips.SetToolTip(btnRestart, "重启：关闭浏览器与终端后，重新启动 Harness 并自动打开浏览器");
 
             // manual theme toggle in the top-right corner (left click flips,
             // right click picks follow-system / dark / light)
@@ -1533,6 +1554,7 @@ namespace DeepSeekHub
             }
             btnChat.Dark = dark;
             btnHarness.Dark = dark;
+            btnRestart.Dark = dark;
             btnPlatform.Dark = dark;
             btnStop.Dark = dark;
             logoBox.Dark = dark;
@@ -2069,6 +2091,7 @@ namespace DeepSeekHub
         {
             bool running = PortOpen();
             btnHarness.Text = running ? "打开 Harness 界面" : "启动 DeepSeek Harness";
+            btnRestart.Enabled = running;
             btnStop.Enabled = running;
             if (running && !polling && !stopping &&
                 (status.Text == "点击按钮，快速进入 DeepSeek" || status.Text == "✓ DeepSeek Harness 已关闭"))
@@ -2093,7 +2116,41 @@ namespace DeepSeekHub
                 OpenUrl("http://127.0.0.1:3080");
                 return;
             }
+            StartHarnessAfterStop();
+        }
 
+        private void RestartHarness()
+        {
+            // 1) close the browser window showing the harness (best effort)
+            CloseHarnessBrowser();
+            // 2) stop the terminal process; when the port is free, auto-start again
+            status.Text = "正在重启 DeepSeek Harness…";
+            status.ForeColor = Color.FromArgb(217, 119, 6);
+            restartAfterStop = true;
+            try
+            {
+                Process.Start(new ProcessStartInfo("powershell.exe",
+                    "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"" + Path.Combine(Application.StartupPath, "DSH-Web-Stop.ps1") + "\"")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+            }
+            catch
+            {
+                status.Text = "重启失败：找不到停止脚本";
+                status.ForeColor = Color.FromArgb(200, 60, 60);
+                restartAfterStop = false;
+                return;
+            }
+            stopping = true;
+            polling = true;
+            deadline = DateTime.UtcNow.AddSeconds(15);
+            poll.Start();
+        }
+
+        private void StartHarnessAfterStop()
+        {
             status.Text = "正在启动 DeepSeek Harness，浏览器将自动打开…";
             status.ForeColor = Color.FromArgb(77, 107, 254);
             try
@@ -2107,14 +2164,39 @@ namespace DeepSeekHub
             }
             catch
             {
-                status.Text = "启动失败：找不到 DSH 启动脚本";
+                status.Text = "重启失败：找不到启动脚本";
                 status.ForeColor = Color.FromArgb(200, 60, 60);
+                polling = false;
+                poll.Stop();
                 return;
             }
-            stopping = false;
             polling = true;
             deadline = DateTime.UtcNow.AddMinutes(3);
             poll.Start();
+        }
+
+        private static void CloseHarnessBrowser()
+        {
+            // Best effort: ask browsers whose window title mentions the harness
+            // to close (WM_CLOSE), so the restart opens a fresh tab.
+            try
+            {
+                string[] browsers = { "msedge", "chrome", "firefox", "opera", "brave", "msedgewebview2" };
+                foreach (Process p in Process.GetProcesses())
+                {
+                    if (Array.IndexOf(browsers, p.ProcessName) < 0) continue;
+                    try
+                    {
+                        if (p.MainWindowHandle != IntPtr.Zero &&
+                            p.MainWindowTitle.IndexOf("Harness", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            PostMessage(p.MainWindowHandle, 0x0010, IntPtr.Zero, IntPtr.Zero); // WM_CLOSE
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
         }
 
         private void StopHarness()
@@ -2160,6 +2242,12 @@ namespace DeepSeekHub
                 if (!PortOpen())
                 {
                     stopping = false;
+                    if (restartAfterStop)
+                    {
+                        restartAfterStop = false;
+                        StartHarnessAfterStop();
+                        return;
+                    }
                     polling = false;
                     poll.Stop();
                     status.Text = "✓ DeepSeek Harness 已关闭";
@@ -2168,6 +2256,7 @@ namespace DeepSeekHub
                 else if (DateTime.UtcNow > deadline)
                 {
                     stopping = false;
+                    restartAfterStop = false;
                     polling = false;
                     poll.Stop();
                     status.Text = "关闭超时，请检查进程或重启电脑";
