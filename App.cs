@@ -15,7 +15,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("DS Hub")]
 [assembly: AssemblyProduct("DS Hub")]
 [assembly: AssemblyDescription("DS Hub 快速启动器")]
-[assembly: AssemblyVersion("3.13.0.0")]
+[assembly: AssemblyVersion("3.14.0.0")]
 
 namespace DeepSeekHub
 {
@@ -105,7 +105,8 @@ namespace DeepSeekHub
             bool dock = args != null && Array.IndexOf(args, "--dock") >= 0;
             bool translateTest = args != null && Array.IndexOf(args, "--translate-test") >= 0;
             bool dumpLayout = args != null && Array.IndexOf(args, "--dump-layout") >= 0;
-            Application.Run(new MainForm(shot, dark, light, dock, translateTest, dumpLayout));
+            bool rechargeTest = args != null && Array.IndexOf(args, "--recharge-test") >= 0;
+            Application.Run(new MainForm(shot, dark, light, dock, translateTest, dumpLayout, rechargeTest));
         }
     }
 
@@ -1016,6 +1017,9 @@ namespace DeepSeekHub
         private readonly PillButton btnSetToken;
         private readonly PillButton btnRecharge;
         private readonly PillButton priceChip;
+        private Microsoft.Web.WebView2.WinForms.WebView2 webView;
+        private Panel rechargeBar;
+        private Size preRechargeSize;
         private readonly Panel bottomArea;
         private readonly Panel translatePanel;
         private readonly PillButton btnDoTranslate;
@@ -1073,7 +1077,7 @@ namespace DeepSeekHub
         [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr GetModuleHandle(string moduleName);
 
-        public MainForm(bool screenshot, bool forceDark, bool forceLight, bool dockTest, bool translateTest, bool dumpLayout)
+        public MainForm(bool screenshot, bool forceDark, bool forceLight, bool dockTest, bool translateTest, bool dumpLayout, bool rechargeTest)
         {
             this.forceDark = forceDark;
             this.forceLight = forceLight;
@@ -1198,7 +1202,7 @@ namespace DeepSeekHub
             this.btnRecharge = btnRecharge;
             btnRecharge.Text = "充值";
             btnRecharge.SetBounds(Ui.S(230), Ui.S(26), Ui.S(56), Ui.S(26));
-            btnRecharge.Click += delegate { OpenUrl("https://platform.deepseek.com/top_up"); };
+            btnRecharge.Click += delegate { ShowRecharge(); };
 
             tips.SetToolTip(btnRefresh, "刷新 API 余额（每分钟自动刷新）");
             tips.SetToolTip(btnSetToken, "设置 DeepSeek API Token");
@@ -1353,7 +1357,7 @@ namespace DeepSeekHub
             PillButton priceChip = new PillButton();
             this.priceChip = priceChip;
             priceChip.Text = "价格";
-            priceChip.SetBounds(Ui.S(21), Ui.S(21), Ui.S(56), Ui.S(24));
+            priceChip.SetBounds(Ui.S(16), Ui.S(18), Ui.S(56), Ui.S(16));
             priceChip.Click += delegate { ShowPriceTable(); };
             tips.SetToolTip(priceChip, "查看 DeepSeek API 价格（高峰 / 空闲，Flash / Pro）");
             root.Controls.Add(priceChip);
@@ -1478,6 +1482,33 @@ namespace DeepSeekHub
             }
 
             ApplyTheme(EffectiveDark());
+
+            if (rechargeTest)
+            {
+                System.Windows.Forms.Timer rt = new System.Windows.Forms.Timer();
+                rt.Interval = 1500;
+                rt.Tick += delegate
+                {
+                    rt.Stop();
+                    ShowRecharge();
+                    System.Windows.Forms.Timer rt2 = new System.Windows.Forms.Timer();
+                    rt2.Interval = 12000;
+                    rt2.Tick += delegate
+                    {
+                        rt2.Stop();
+                        try
+                        {
+                            bool ok = webView != null && webView.CoreWebView2 != null;
+                            System.IO.File.WriteAllText(Path.Combine(Ui.DataDir(), "recharge-test.log"),
+                                DateTime.Now + " webview ready=" + ok + " url=" + (ok ? webView.Source.ToString() : "n/a") + "\n");
+                        }
+                        catch { }
+                        Application.Exit();
+                    };
+                    rt2.Start();
+                };
+                rt.Start();
+            }
 
             if (screenshot && dockTest)
             {
@@ -2108,6 +2139,72 @@ namespace DeepSeekHub
             {
                 f.ShowDialog(this);
             }
+        }
+
+        /// <summary>In-app recharge: embedded WebView2 showing the Platform top-up page.</summary>
+        private async void ShowRecharge()
+        {
+            if (webView == null)
+            {
+                webView = new Microsoft.Web.WebView2.WinForms.WebView2();
+                webView.Dock = DockStyle.Fill;
+                webView.Visible = false;
+
+                rechargeBar = new Panel();
+                rechargeBar.Dock = DockStyle.Top;
+                rechargeBar.Height = Ui.S(34);
+                rechargeBar.BackColor = currentDark ? Color.FromArgb(24, 26, 32) : Color.White;
+                rechargeBar.Visible = false;
+
+                Button back = new Button();
+                back.Text = "← 返回";
+                back.FlatStyle = FlatStyle.Flat;
+                back.SetBounds(Ui.S(6), Ui.S(3), Ui.S(80), Ui.S(28));
+                back.Click += delegate { HideRecharge(); };
+                rechargeBar.Controls.Add(back);
+
+                Label title = new Label();
+                title.Text = "DeepSeek Platform 充值";
+                title.ForeColor = currentDark ? Color.FromArgb(206, 212, 226) : Color.FromArgb(30, 35, 45);
+                title.SetBounds(Ui.S(96), Ui.S(7), Ui.S(400), Ui.S(20));
+                rechargeBar.Controls.Add(title);
+
+                Controls.Add(webView);
+                Controls.Add(rechargeBar);
+                webView.BringToFront();
+                rechargeBar.BringToFront();
+
+                try
+                {
+                    string dataDir = Path.Combine(Ui.DataDir(), "WebView2");
+                    var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, dataDir);
+                    await webView.EnsureCoreWebView2Async(env);
+                    webView.Source = new Uri("https://platform.deepseek.com/top_up");
+                }
+                catch
+                {
+                    // WebView2 runtime unavailable: fall back to the default browser
+                    webView.Visible = false;
+                    rechargeBar.Visible = false;
+                    OpenUrl("https://platform.deepseek.com/top_up");
+                    return;
+                }
+            }
+            preRechargeSize = Size;
+            Size = new Size(Ui.S(680), Ui.S(520));
+            CenterToScreen();
+            webView.Visible = true;
+            rechargeBar.Visible = true;
+            webView.BringToFront();
+            rechargeBar.BringToFront();
+        }
+
+        private void HideRecharge()
+        {
+            webView.Visible = false;
+            rechargeBar.Visible = false;
+            Size = preRechargeSize;
+            CenterToScreen();
         }
 
         /// <summary>Beijing-time peak window: 09:00-12:00 and 14:00-18:00.</summary>

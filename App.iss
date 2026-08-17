@@ -1,5 +1,5 @@
 #define MyAppName "DS Hub"
-#define MyAppVersion "3.13.0.0"
+#define MyAppVersion "3.14.0.0"
 #define MyAppExeName "DS Hub.exe"
 
 [Setup]
@@ -33,6 +33,9 @@ Source: "D:\DSH_start\DeepSeek.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\DSH_start\DSH-Web-Launcher.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\DSH_start\DSH-Web-Stop.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\DSH_start\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\DSH_start\Microsoft.Web.WebView2.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\DSH_start\Microsoft.Web.WebView2.WinForms.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\DSH_start\WebView2Loader.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\DSH_start\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
