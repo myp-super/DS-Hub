@@ -15,7 +15,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("DS Hub")]
 [assembly: AssemblyProduct("DS Hub")]
 [assembly: AssemblyDescription("DS Hub 快速启动器")]
-[assembly: AssemblyVersion("3.12.0.0")]
+[assembly: AssemblyVersion("3.13.0.0")]
 
 namespace DeepSeekHub
 {
@@ -776,6 +776,88 @@ namespace DeepSeekHub
         }
     }
 
+    /// <summary>DeepSeek API price table: peak vs off-peak, Flash vs Pro (yuan / 1M tokens).</summary>
+    internal sealed class PriceForm : Form
+    {
+        public PriceForm(bool dark, bool peakNow)
+        {
+            Text = "DeepSeek API 价格";
+            AutoScaleMode = AutoScaleMode.None;
+            Font = new Font("Microsoft YaHei UI", 9F);
+            ClientSize = new Size(Ui.S(430), Ui.S(246));
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            StartPosition = FormStartPosition.CenterParent;
+            BackColor = dark ? Color.FromArgb(24, 26, 32) : Color.White;
+            try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+
+            Color head = dark ? Color.FromArgb(150, 158, 175) : Color.FromArgb(110, 118, 132);
+            Color cell = dark ? Color.FromArgb(206, 212, 226) : Color.FromArgb(30, 35, 45);
+            Color hot = Color.FromArgb(217, 119, 6);
+            Color cool = Color.FromArgb(34, 154, 88);
+
+            Label title = new Label();
+            title.Text = "DeepSeek API 价格（元 / 百万 tokens）";
+            title.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+            title.ForeColor = cell;
+            title.SetBounds(Ui.S(16), Ui.S(12), Ui.S(398), Ui.S(22));
+            Controls.Add(title);
+
+            string[] heads = { "模型", "时段", "输入·命中", "输入·未命中", "输出" };
+            int[] xs = { 16, 90, 170, 270, 370 };
+            for (int i = 0; i < heads.Length; i++)
+            {
+                Label l = new Label();
+                l.Text = heads[i];
+                l.Font = new Font("Microsoft YaHei UI", 8F);
+                l.ForeColor = head;
+                l.SetBounds(Ui.S(xs[i]), Ui.S(40), Ui.S(80), Ui.S(18));
+                Controls.Add(l);
+            }
+
+            string[,] rows = {
+                { "Flash", "高峰", "0.10", "3.0", "9.0" },
+                { "Flash", "空闲", "0.05", "1.5", "4.5" },
+                { "Pro",   "高峰", "0.30", "9.0", "27.0" },
+                { "Pro",   "空闲", "0.15", "4.5", "13.5" }
+            };
+            bool[] rowPeak = { true, false, true, false };
+            int y = 62;
+            for (int r = 0; r < 4; r++)
+            {
+                bool current = rowPeak[r] == peakNow;
+                for (int c = 0; c < 5; c++)
+                {
+                    Label l = new Label();
+                    l.Text = rows[r, c];
+                    FontStyle fs = FontStyle.Regular;
+                    Color fc = cell;
+                    if (c == 0) fs = FontStyle.Bold;
+                    if (current) { fs = FontStyle.Bold; fc = rowPeak[r] ? hot : cool; }
+                    l.Font = new Font("Microsoft YaHei UI", 8F, fs);
+                    l.ForeColor = fc;
+                    l.SetBounds(Ui.S(xs[c]), Ui.S(y), Ui.S(80), Ui.S(18));
+                    Controls.Add(l);
+                }
+                y += 22;
+            }
+
+            Label note = new Label();
+            note.Text = "高峰时段：每日 09:00-12:00、14:00-18:00（北京时间）\n价格随官方调整，以 api-docs.deepseek.com 为准";
+            note.Font = new Font("Microsoft YaHei UI", 8F);
+            note.ForeColor = head;
+            note.SetBounds(Ui.S(16), Ui.S(156), Ui.S(398), Ui.S(36));
+            Controls.Add(note);
+
+            Button close = new Button();
+            close.Text = "关闭";
+            close.SetBounds(Ui.S(430) - Ui.S(110), Ui.S(198), Ui.S(80), Ui.S(30));
+            close.Click += delegate { Close(); };
+            Controls.Add(close);
+        }
+    }
+
     /// <summary>Small borderless toast for translation results (click or Esc to close).</summary>
     internal sealed class ToastForm : Form
     {
@@ -932,6 +1014,8 @@ namespace DeepSeekHub
         private readonly Panel balanceArea;
         private readonly PillButton btnRefresh;
         private readonly PillButton btnSetToken;
+        private readonly PillButton btnRecharge;
+        private readonly PillButton priceChip;
         private readonly Panel bottomArea;
         private readonly Panel translatePanel;
         private readonly PillButton btnDoTranslate;
@@ -1101,18 +1185,26 @@ namespace DeepSeekHub
             PillButton btnRefresh = new PillButton();
             this.btnRefresh = btnRefresh;
             btnRefresh.Text = "刷新";
-            btnRefresh.SetBounds(Ui.S(174), Ui.S(26), Ui.S(56), Ui.S(26));
+            btnRefresh.SetBounds(Ui.S(118), Ui.S(26), Ui.S(56), Ui.S(26));
             btnRefresh.Click += delegate { RefreshBalance(); };
 
             PillButton btnSetToken = new PillButton();
             this.btnSetToken = btnSetToken;
             btnSetToken.Text = "设置";
-            btnSetToken.SetBounds(Ui.S(230), Ui.S(26), Ui.S(56), Ui.S(26));
+            btnSetToken.SetBounds(Ui.S(174), Ui.S(26), Ui.S(56), Ui.S(26));
             btnSetToken.Click += delegate { ShowTokenDialog(); };
+
+            PillButton btnRecharge = new PillButton();
+            this.btnRecharge = btnRecharge;
+            btnRecharge.Text = "充值";
+            btnRecharge.SetBounds(Ui.S(230), Ui.S(26), Ui.S(56), Ui.S(26));
+            btnRecharge.Click += delegate { OpenUrl("https://platform.deepseek.com/top_up"); };
 
             tips.SetToolTip(btnRefresh, "刷新 API 余额（每分钟自动刷新）");
             tips.SetToolTip(btnSetToken, "设置 DeepSeek API Token");
+            tips.SetToolTip(btnRecharge, "打开 Platform 充值页面");
 
+            balanceArea.Controls.Add(btnRecharge);
             balanceArea.Controls.Add(btnRefresh);
             balanceArea.Controls.Add(btnSetToken);
             balanceArea.Controls.Add(balSub);
@@ -1256,6 +1348,16 @@ namespace DeepSeekHub
             btnRestart.Click += delegate { RestartHarness(); };
             btnStop.Click += delegate { StopHarness(); };
             tips.SetToolTip(btnRestart, "重启：关闭浏览器与终端后，重新启动 Harness 并自动打开浏览器");
+
+            // API price chip in the top-left free area (click opens the price table)
+            PillButton priceChip = new PillButton();
+            this.priceChip = priceChip;
+            priceChip.Text = "价格";
+            priceChip.SetBounds(Ui.S(21), Ui.S(21), Ui.S(56), Ui.S(24));
+            priceChip.Click += delegate { ShowPriceTable(); };
+            tips.SetToolTip(priceChip, "查看 DeepSeek API 价格（高峰 / 空闲，Flash / Pro）");
+            root.Controls.Add(priceChip);
+            priceChip.BringToFront();
 
             // manual theme toggle in the top-right corner (left click flips,
             // right click picks follow-system / dark / light)
@@ -1856,8 +1958,9 @@ namespace DeepSeekHub
             // keep the fixed-position controls pinned to the right edge as the window grows
             if (balanceArea == null || bottomArea == null) return;
             int bw = balanceArea.Width;
-            btnRefresh.Location = new Point(bw - Ui.S(118), Ui.S(26));
-            btnSetToken.Location = new Point(bw - Ui.S(62), Ui.S(26));
+            btnRefresh.Location = new Point(bw - Ui.S(174), Ui.S(26));
+            btnSetToken.Location = new Point(bw - Ui.S(118), Ui.S(26));
+            btnRecharge.Location = new Point(bw - Ui.S(62), Ui.S(26));
             int tw = bottomArea.Width;
             inputBox.Width = tw - Ui.S(28);
             outputBox.Width = tw - Ui.S(28);
@@ -1997,6 +2100,22 @@ namespace DeepSeekHub
         {
             currentToken = token;
             try { File.WriteAllText(tokenPath, token); } catch { }
+        }
+
+        private void ShowPriceTable()
+        {
+            using (PriceForm f = new PriceForm(currentDark, IsPeakNow()))
+            {
+                f.ShowDialog(this);
+            }
+        }
+
+        /// <summary>Beijing-time peak window: 09:00-12:00 and 14:00-18:00.</summary>
+        private static bool IsPeakNow()
+        {
+            DateTime bj = DateTime.UtcNow.AddHours(8);
+            int mins = bj.Hour * 60 + bj.Minute;
+            return (mins >= 540 && mins < 720) || (mins >= 840 && mins < 1080);
         }
 
         private void ShowTokenDialog()
